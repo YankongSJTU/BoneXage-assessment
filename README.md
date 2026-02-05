@@ -1,3 +1,73 @@
+
+%% 将此代码块复制到你的 GitHub README.md 中
+graph TD
+    %% 定义样式
+    classDef input fill:#E1F5FE,stroke:#0288D1,stroke-width:2px,color:#01579B;
+    classDef output fill:#E8F5E9,stroke:#388E3C,stroke-width:2px,color:#1B5E20;
+    classDef backbone fill:#FFF3E0,stroke:#FF9800,stroke-width:2px,color:#E65100;
+    classDef pooling fill:#F3E5F5,stroke:#9C27B0,stroke-width:2px,color:#4A148C;
+    classDef fusion fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F;
+    classDef head fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#F57F17;
+    classDef tensor fill:#FFFFFF,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray: 5 5;
+
+    %% 输入层
+    subgraph Inputs [输入数据]
+        IMG[图像输入<br>Batch x 3 x 512 x 512]:::input
+        SEX[性别输入<br>Batch x 1 (0或1)]:::input
+    end
+
+    %% 图像处理分支
+    subgraph Image Branch [图像特征提取分支]
+        BACKBONE[ConvNeXt-Tiny Backbone<br>(预训练权重)]:::backbone
+        FEAT_MAPS(特征图<br>Batch x 768 x H' x W'):::tensor
+        GEM[GeM Pooling<br>(广义平均池化)]:::pooling
+        IMG_VEC(图像特征向量<br>Batch x 768):::tensor
+    end
+
+    %% 性别处理分支
+    subgraph Sex Branch [性别编码分支]
+        SEX_ENC[Sex Encoder MLP<br>Linear-BN-ReLU x2]:::block
+        SEX_VEC(性别特征向量<br>Batch x 32):::tensor
+    end
+
+    %% 特征融合
+    CONCAT{特征拼接<br>Concatenation}:::fusion
+    FUSED_VEC(融合特征向量<br>Batch x 800):::tensor
+
+    %% 回归头
+    subgraph Regression Head [回归预测头]
+        L1[BN + Dropout(0.5)]:::head
+        L2[Linear(800->512) + Mish激活]:::head
+        L3[BN + Dropout(0.4)]:::head
+        L4[Linear(512->64) + Mish激活]:::head
+        L5[Linear(64->1)]:::head
+    end
+
+    %% 输出缩放
+    SCALING[Range Scaling<br>Sigmoid * MaxAge(240)]:::fusion
+    FINAL_OUT(最终预测骨龄<br>Batch x 1 (月)]:::output
+
+    %% 连接关系
+    IMG --> BACKBONE
+    BACKBONE --> FEAT_MAPS
+    FEAT_MAPS --> GEM
+    GEM --> IMG_VEC
+
+    SEX --> SEX_ENC
+    SEX_ENC --> SEX_VEC
+
+    IMG_VEC --> CONCAT
+    SEX_VEC --> CONCAT
+    CONCAT --> FUSED_VEC
+
+    FUSED_VEC --> L1
+    L1 --> L2
+    L2 --> L3
+    L3 --> L4
+    L4 --> L5
+
+    L5 --> SCALING
+    SCALING --> FINAL_OUT
 # BoneXage-assessment
 Predicting children's bone age using hand X-ray images
 # 🦴 Bone Age Assessment using ConvNeXt & GeM Pooling
@@ -75,72 +145,3 @@ Input Size,512x512
     ConvNeXt architecture based on A ConvNet for the 2020s.
 
 
-%% 将此代码块复制到你的 GitHub README.md 中
-graph TD
-    %% 定义样式
-    classDef input fill:#E1F5FE,stroke:#0288D1,stroke-width:2px,color:#01579B;
-    classDef output fill:#E8F5E9,stroke:#388E3C,stroke-width:2px,color:#1B5E20;
-    classDef backbone fill:#FFF3E0,stroke:#FF9800,stroke-width:2px,color:#E65100;
-    classDef pooling fill:#F3E5F5,stroke:#9C27B0,stroke-width:2px,color:#4A148C;
-    classDef fusion fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F;
-    classDef head fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#F57F17;
-    classDef tensor fill:#FFFFFF,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray: 5 5;
-
-    %% 输入层
-    subgraph Inputs [输入数据]
-        IMG[图像输入<br>Batch x 3 x 512 x 512]:::input
-        SEX[性别输入<br>Batch x 1 (0或1)]:::input
-    end
-
-    %% 图像处理分支
-    subgraph Image Branch [图像特征提取分支]
-        BACKBONE[ConvNeXt-Tiny Backbone<br>(预训练权重)]:::backbone
-        FEAT_MAPS(特征图<br>Batch x 768 x H' x W'):::tensor
-        GEM[GeM Pooling<br>(广义平均池化)]:::pooling
-        IMG_VEC(图像特征向量<br>Batch x 768):::tensor
-    end
-
-    %% 性别处理分支
-    subgraph Sex Branch [性别编码分支]
-        SEX_ENC[Sex Encoder MLP<br>Linear-BN-ReLU x2]:::block
-        SEX_VEC(性别特征向量<br>Batch x 32):::tensor
-    end
-
-    %% 特征融合
-    CONCAT{特征拼接<br>Concatenation}:::fusion
-    FUSED_VEC(融合特征向量<br>Batch x 800):::tensor
-
-    %% 回归头
-    subgraph Regression Head [回归预测头]
-        L1[BN + Dropout(0.5)]:::head
-        L2[Linear(800->512) + Mish激活]:::head
-        L3[BN + Dropout(0.4)]:::head
-        L4[Linear(512->64) + Mish激活]:::head
-        L5[Linear(64->1)]:::head
-    end
-
-    %% 输出缩放
-    SCALING[Range Scaling<br>Sigmoid * MaxAge(240)]:::fusion
-    FINAL_OUT(最终预测骨龄<br>Batch x 1 (月)]:::output
-
-    %% 连接关系
-    IMG --> BACKBONE
-    BACKBONE --> FEAT_MAPS
-    FEAT_MAPS --> GEM
-    GEM --> IMG_VEC
-
-    SEX --> SEX_ENC
-    SEX_ENC --> SEX_VEC
-
-    IMG_VEC --> CONCAT
-    SEX_VEC --> CONCAT
-    CONCAT --> FUSED_VEC
-
-    FUSED_VEC --> L1
-    L1 --> L2
-    L2 --> L3
-    L3 --> L4
-    L4 --> L5
-
-    L5 --> SCALING
-    SCALING --> FINAL_OUT
