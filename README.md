@@ -85,32 +85,8 @@ data/test_imgs/1234.png: 10 years 6 months (126.5 months)
 data/test_imgs/5678.png: 13 years 2 months (158.1 months)
 ##  Model Architecture
 The following diagram illustrates the data flow through the network, highlighting the dual-branch input and the specialized pooling and output layers.
+<img width="1441" height="3556" alt="deepseek_mermaid_20260205_d81abf" src="https://github.com/user-attachments/assets/1985038c-7bd3-4fba-9dd1-fa6227085b81" />
 
-    graph TD
-    subgraph 输入阶段 Inputs
-        IMG[Input Image<br>512x512x3] --> B
-        SEX[Patient Sex<br>One-hot [0,1]] --> G
-    end
-    
-    subgraph 特征提取 Feature Extraction
-        B[ConvNeXt-Tiny<br>Pre-trained on ImageNet] -- Feature Maps --> C
-        G[Sex Encoder<br>MLP: 2→32→64] -- Sex Vector --> I
-    end
-    
-    subgraph 特征融合 Feature Fusion
-        C[GeM Pooling<br>p=3.0] -- Image Feature: 768-d --> I{Concat}
-        G -- Sex Feature: 64-d --> I
-    end
-    
-    subgraph 回归预测 Regression
-        I -- Fused Features: 832-d --> J
-        J[Regression Head<br>FC: 832→512→128→1<br>BN + Mish + Dropout] --> K
-        K[Range Scaling<br>Sigmoid × 240] --> L
-    end
-    
-    subgraph 输出 Output
-        L((Predicted Age<br>Months: 0-240))
-    end
 
 ##  📊 Results
 
