@@ -20,14 +20,103 @@ This project utilizes a modern CNN architecture (ConvNeXt) combined with General
 
 ## 📂 Project Structure
 
-```text
-BoneXage-Assessment/
-├── data/                  # Dataset storage (must be created manually)
-│   ├── boneage-training-dataset/
-│   └── boneage-test-dataset/
-├── checkpoints/           # Saved model weights
-├── models.py              # Model architecture and configuration
-├── train.py               # Training script
-├── predict.py             # Inference script for batch prediction
-├── requirements.txt       # Dependencies list
-└── README.md              # Project documentation
+    BoneXage-Assessment/
+    ├── data/                  # Dataset storage (must be created manually)
+    │   ├── boneage-training-dataset/
+    │   └── boneage-test-dataset/
+    ├── checkpoints/           # Saved model weights
+    ├── models.py              # Model architecture and configuration
+    ├── train.py               # Training script
+    ├── predict.py             # Inference script for batch prediction
+    ├── requirements.txt       # Dependencies list
+    └── README.md              # Project documentation
+
+## 🛠️ Installation & Requirements
+
+Ensure you have Python 3.8+ installed.
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/yourusername/BoneXage-assessment.git
+    cd BoneXage-assessment
+    ```
+
+2.  **Install dependencies:**
+    You can install the necessary libraries via pip:
+    ```bash
+    pip install torch torchvision numpy pandas matplotlib scikit-learn tqdm pillow
+    ```
+    Or, if you have a `requirements.txt` file provided:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## 💿 Dataset Preparation
+
+This project uses the RSNA Pediatric Bone Age Challenge dataset. Due to license restrictions, you must download the data yourself (e.g., from Kaggle).
+
+Please organize your `data/` directory exactly as follows:
+
+    data/
+    ├── boneage-training-dataset/   # Directory containing training images (.png)
+    ├── boneage-test-dataset/       # Directory containing test images (.png)
+    ├── boneage-training-dataset.csv
+    └── boneage-test-dataset.csv
+
+## 🖥️ Usage
+
+### 1. Training
+
+Run `train.py` to start training the model. The script automatically detects available GPUs and utilizes `nn.DataParallel` for multi-GPU training if applicable.
+
+```bash
+python train.py
+```
+### 2. Inference (Prediction)
+Use predict.py to predict bone age for a list of images.
+Preparation: Create a text file (e.g., image_list.txt) containing the full paths to the images you want to predict, one per line:
+data/test_imgs/1234.png
+data/test_imgs/5678.png
+
+python predict.py <image_list_filename> <sex(M/F)> [image_size] [model_path]
+
+Output Example:
+data/test_imgs/1234.png: 10 years 6 months (126.5 months)
+data/test_imgs/5678.png: 13 years 2 months (158.1 months)
+##  Model Architecture
+The following diagram illustrates the data flow through the network, highlighting the dual-branch input and the specialized pooling and output layers.
+
+graph TD
+    subgraph Inputs
+        IMG[Input Image<br>512x512] --> B[ConvNeXt-Tiny Backbone]
+        SEX[Input Sex<br>0 or 1] --> G[Sex Encoder MLP]
+    end
+    
+    B -- Feature Maps --> C[GeM Pooling<br>Generalized Mean]
+    C -- Image Vector --> I[Concat]
+    G -- Sex Vector --> I
+    
+    I -- Fused Features --> J[Regression Head<br>FC Layers + Mish + BN + Dropout]
+    J --> K[Range Scaling<br>Sigmoid * 240]
+    K --> L((Predicted Age<br>Months))
+
+    style IMG fill:#e1f5fe,stroke:#01579b
+    style SEX fill:#e1f5fe,stroke:#01579b
+    style C fill:#f3e5f5,stroke:#4a148c
+    style K fill:#e8f5e9,stroke:#1b5e20
+    style L fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
+
+##  📊 Results
+
+Performance metrics on the RSNA test set.
+Metric,Value (Approx),Notes
+MAE (Mean Absolute Error),To be updated,Lower is better
+RMSE (Root Mean Sq Error),To be updated,
+Backbone,ConvNeXt-Tiny,Pretrained on ImageNet
+Input Resolution,512x512,
+
+## 📝 Acknowledgments
+
+    Dataset provided by the RSNA Pediatric Bone Age Challenge.
+    ConvNeXt architecture based on the paper "A ConvNet for the 2020s".
+    
