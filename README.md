@@ -87,24 +87,30 @@ data/test_imgs/5678.png: 13 years 2 months (158.1 months)
 The following diagram illustrates the data flow through the network, highlighting the dual-branch input and the specialized pooling and output layers.
 
     graph TD
-    subgraph Inputs
-        IMG[Input Image<br>512x512] --> B[ConvNeXt-Tiny Backbone]
-        SEX[Input Sex<br>0 or 1] --> G[Sex Encoder MLP]
+    subgraph 输入阶段 Inputs
+        IMG[Input Image<br>512x512x3] --> B
+        SEX[Patient Sex<br>One-hot [0,1]] --> G
     end
     
-    B -- Feature Maps --> C[GeM Pooling<br>Generalized Mean]
-    C -- Image Vector --> I[Concat]
-    G -- Sex Vector --> I
+    subgraph 特征提取 Feature Extraction
+        B[ConvNeXt-Tiny<br>Pre-trained on ImageNet] -- Feature Maps --> C
+        G[Sex Encoder<br>MLP: 2→32→64] -- Sex Vector --> I
+    end
     
-    I -- Fused Features --> J[Regression Head<br>FC Layers + Mish + BN + Dropout]
-    J --> K[Range Scaling<br>Sigmoid * 240]
-    K --> L((Predicted Age<br>Months))
-
-    style IMG fill:#e1f5fe,stroke:#01579b
-    style SEX fill:#e1f5fe,stroke:#01579b
-    style C fill:#f3e5f5,stroke:#4a148c
-    style K fill:#e8f5e9,stroke:#1b5e20
-    style L fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
+    subgraph 特征融合 Feature Fusion
+        C[GeM Pooling<br>p=3.0] -- Image Feature: 768-d --> I{Concat}
+        G -- Sex Feature: 64-d --> I
+    end
+    
+    subgraph 回归预测 Regression
+        I -- Fused Features: 832-d --> J
+        J[Regression Head<br>FC: 832→512→128→1<br>BN + Mish + Dropout] --> K
+        K[Range Scaling<br>Sigmoid × 240] --> L
+    end
+    
+    subgraph 输出 Output
+        L((Predicted Age<br>Months: 0-240))
+    end
 
 ##  📊 Results
 
