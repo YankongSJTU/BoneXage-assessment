@@ -1,123 +1,142 @@
-graph TD
-    %% 定义样式
-    classDef input fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,rx:5,ry:5;
-    classDef backbone fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C,rx:5,ry:5;
-    classDef pooling fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C,rx:5,ry:5;
-    classDef fusion fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F,rx:5,ry:5;
-    classDef dense fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#F57F17,rx:5,ry:5;
-    classDef scaling fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,rx:5,ry:5;
-    classDef output fill:#E0F2F1,stroke:#00695C,stroke-width:3px,color:#004D40,rx:10,ry:10;
+🦴 BoneXage-Assessment
 
-    subgraph Inputs [输入层 Inputs]
-        direction LR
-        IMG_IN[图像输入<br>Image Input<br>(B, 3, 512, 512)]:::input
-        SEX_IN[性别输入<br>Sex Input<br>(B, 1)]:::input
-    end
+A PyTorch implementation for precise pediatric Bone Age Assessment (BAA) based on hand radiographs.
 
-    subgraph ImagePath [图像特征提取路径 Image Branch]
-        IMG_IN --> BACKBONE[<b>ConvNeXt-Tiny Backbone</b><br>(预训练特征提取器)]:::backbone
-        BACKBONE -- "(B, 768, H', W')" --> GEM[<b>GeM Pooling</b><br>(广义平均池化)]:::pooling
-        GEM -- "(B, 768)" --> IMG_VEC(图像特征向量<br>Image Feature Vector):::dense
-    end
+This project utilizes a modern CNN architecture (ConvNeXt) combined with Generalized Mean (GeM) Pooling and specific optimizations for medical regression tasks. It achieves superior convergence and stability on the RSNA Pediatric Bone Age dataset compared to traditional baselines like ResNet or EfficientNet.
+🚀 Key Features
 
-    subgraph SexPath [性别编码路径 Sex Branch]
-        SEX_IN --> SEX_ENC_1[Linear (1->16)<br>BN + ReLU]:::dense
-        SEX_ENC_1 --> SEX_ENC_2[Linear (16->32)<br>BN + ReLU]:::dense
-        SEX_ENC_2 -- "(B, 32)" --> SEX_VEC(性别特征向量<br>Sex Feature Vector):::dense
-    end
+    SOTA Backbone: Utilizes ConvNeXt-Tiny as the feature extractor, offering stronger feature representation for medical imaging analysis.
 
-    subgraph FusionHead [融合与回归头 Fusion & Regression Head]
-        IMG_VEC --> CONCAT{特征拼接<br>Concatenation}:::fusion
-        SEX_VEC --> CONCAT
-        CONCAT -- "(B, 800)" --> HEAD_1[BN(800) + Dropout(0.5)]:::dense
-        HEAD_1 --> HEAD_2[Linear (800->512)<br><b>Mish Activation</b>]:::dense
-        HEAD_2 --> HEAD_3[BN(512) + Dropout(0.4)]:::dense
-        HEAD_3 --> HEAD_4[Linear (512->64)<br><b>Mish Activation</b>]:::dense
-        HEAD_4 --> HEAD_5[Linear (64->1)<br>Raw Output]:::dense
-    end
+    GeM Pooling: Implements learnable Generalized Mean (GeM) Pooling instead of standard Average Pooling. This acts similarly to an attention mechanism, better capturing high-response features like crucial ossification centers.
 
-    subgraph OutputLayer [输出层 Output Layer]
-        HEAD_5 --> SIGMOID[<b>Range Scaling</b><br>Sigmoid * MaxAge(240)]:::scaling
-        SIGMOID --> FINAL_OUT((最终预测骨龄<br>Final Bone Age<br>月份 Months)):::output
-    end
+    Multi-Modal Fusion: Integrates image features with gender encoding (male/female) to significantly improve prediction accuracy, as bone maturation rates differ by sex.
 
-    %% 样式调整
-    linkStyle default stroke:#455A64,stroke-width:2px,fill:none;
-# BoneXage-assessment
-Predicting children's bone age using hand X-ray images
-# 🦴 Bone Age Assessment using ConvNeXt & GeM Pooling
+    Numerical Stability: Applies a Sigmoid * Max_Age (e.g., 240 months) scaling technique at the final output layer. This constraint eliminates physically impossible negative predictions and prevents gradient explosion, ensuring highly stable training dynamics.
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+    AMP Support: Implements Automatic Mixed Precision (AMP) for faster training speeds and reduced GPU memory usage.
 
-A PyTorch implementation for precise pediatric **Bone Age Assessment (BAA)** based on hand radiographs.
+📂 Project Structure
+Plaintext
 
-This project utilizes a modern CNN architecture (**ConvNeXt**) combined with **Generalized Mean (GeM) Pooling** and specific optimizations for medical regression tasks. It achieves superior convergence and stability on the RSNA Pediatric Bone Age dataset compared to traditional baselines.
+BoneXage-Assessment/
+├── data/                  # Dataset storage (must be created manually)
+│   ├── boneage-training-dataset/
+│   └── boneage-test-dataset/
+├── checkpoints/           # Saved model weights
+├── models.py              # Model architecture and configuration
+├── train.py               # Training script
+├── predict.py             # Inference script for batch prediction
+├── requirements.txt       # Dependencies list
+└── README.md              # Project documentation
 
-## 🚀 Key Features
+🛠️ Installation & Requirements
 
-* **SOTA Backbone**: Utilizes `ConvNeXt-Tiny` as the feature extractor, offering stronger feature representation than ResNet50 or EfficientNet.
-* **GeM Pooling**: Implements learnable Generalized Mean Pooling instead of standard Average Pooling to better capture high-response features (e.g., ossification centers).
-* **Multi-Modal Fusion**: Integrates image features with gender encoding to improve prediction accuracy significantly.
-* **Numerical Stability**: Applies `Sigmoid * Max_Age` scaling at the output layer. This constraint prevents negative predictions and gradient explosion, ensuring stable training dynamics.
-* **AMP Support**: Implements Automatic Mixed Precision (AMP) for faster training and lower GPU memory usage.
+Ensure you have Python 3.8+ installed.
 
-## 🛠️ Requirements
+    Clone the repository:
+    Bash
 
-Ensure you have Python installed. You can install the dependencies via pip:
+    git clone https://github.com/yourusername/BoneXage-assessment.git
+    cd BoneXage-assessment
 
-```bash
-pip install torch torchvision numpy pandas matplotlib scikit-learn tqdm pillow
+    Install dependencies: You can install the necessary libraries via pip:
+    Bash
 
+    pip install torch torchvision numpy pandas matplotlib scikit-learn tqdm pillow
 
-##📂 Dataset Preparation
-This project uses the RSNA Pediatric Bone Age Challenge dataset. Please organize your data directory as follows:
+    Or, if you have a requirements.txt file provided:
+    Bash
+
+    pip install -r requirements.txt
+
+💿 Dataset Preparation
+
+This project uses the RSNA Pediatric Bone Age Challenge dataset. Due to license restrictions, you must download the data yourself (e.g., from Kaggle).
+
+Please organize your data/ directory exactly as follows:
+Plaintext
+
 data/
-├── boneage-training-dataset/   # Training images
-├── boneage-test-dataset/       # Test images
+├── boneage-training-dataset/   # Directory containing training images (.png)
+├── boneage-test-dataset/       # Directory containing test images (.png)
 ├── boneage-training-dataset.csv
 └── boneage-test-dataset.csv
 
-
-## 🖥️ Usage
+🖥️ Usage
 1. Training
 
-Run train.py to start training. The script automatically detects available GPUs and utilizes DataParallel if applicable.
+Run train.py to start training the model. The script automatically detects available GPUs and utilizes nn.DataParallel for multi-GPU training if applicable.
+Bash
+
 python train.py
 
-2. Inference
+    Note: Hyperparameters like Batch Size, Learning Rate, and Image Size can be modified in the Config class within models.py.
 
-Use predict.py to predict the bone age for a single image.
-python predict.py <image_list_filename> <sex(M/F)> <image_size> <model_path>
+2. Inference (Prediction)
 
-Output:
+Use predict.py to predict bone age for a list of images.
+
+Preparation: Create a text file (e.g., image_list.txt) containing the full paths to the images you want to predict, one per line:
+Plaintext
+
+data/test_imgs/1234.png
+data/test_imgs/5678.png
+
+Command:
+Bash
+
+python predict.py <image_list_filename> <sex(M/F)> [image_size] [model_path]
+
+Example:
+Bash
+
+python predict.py image_list.txt M 512 checkpoints/best_model.pth
+
+Output Example:
+Plaintext
+
 data/test_imgs/1234.png: 10 years 6 months (126.5 months)
+data/test_imgs/5678.png: 13 years 2 months (158.1 months)
 
-## 🧠 Model Architecture
-graph LR
-    A[Input Image 512x512] --> B[ConvNeXt Backbone]
-    B --> C[Feature Maps]
-    C --> D[GeM Pooling]
-    D --> E[Image Features]
+🧠 Model Architecture
+
+The following diagram illustrates the data flow through the network, highlighting the dual-branch input and the specialized pooling and output layers.
+代码段
+
+graph TD
+    subgraph Inputs
+        IMG[Input Image<br>512x512] --> B[ConvNeXt-Tiny Backbone]
+        SEX[Input Sex<br>0 or 1] --> G[Sex Encoder MLP]
+    end
     
-    F[Input Sex] --> G[Sex Encoder]
-    G --> H[Sex Features]
+    B -- Feature Maps --> C[GeM Pooling<br>Generalized Mean]
+    C -- Image Vector --> I[Concat]
+    G -- Sex Vector --> I
     
-    E --> I[Concat]
-    H --> I
-    I --> J[FC Layers + Mish]
-    J --> K[Sigmoid * 240]
-    K --> L[Predicted Age (Months)]
+    I -- Fused Features --> J[Regression Head<br>FC Layers + Mish + BN + Dropout]
+    J --> K[Range Scaling<br>Sigmoid * 240]
+    K --> L((Predicted Age<br>Months))
 
-## 📊 Results
-Metric,Value (Approx)
-MAE (Mean Absolute Error),To be updated
-Backbone,ConvNeXt-Tiny
-Input Size,512x512
+    style IMG fill:#e1f5fe,stroke:#01579b
+    style SEX fill:#e1f5fe,stroke:#01579b
+    style C fill:#f3e5f5,stroke:#4a148c
+    style K fill:#e8f5e9,stroke:#1b5e20
+    style L fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
 
-##📝 Acknowledgments
+📊 Results
+
+Performance metrics on the RSNA test set.
+Metric	Value (Approx)	Notes
+MAE (Mean Absolute Error)	To be updated	Lower is better
+RMSE (Root Mean Sq Error)	To be updated	
+Backbone	ConvNeXt-Tiny	Pretrained on ImageNet
+Input Resolution	512x512	
+📝 Acknowledgments
+
     Dataset provided by the RSNA Pediatric Bone Age Challenge.
-    ConvNeXt architecture based on A ConvNet for the 2020s.
 
+    ConvNeXt architecture based on the paper "A ConvNet for the 2020s".
 
+📜 License
+
+This project is licensed under the MIT License.
