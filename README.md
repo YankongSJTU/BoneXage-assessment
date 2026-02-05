@@ -1,3 +1,48 @@
+graph TD
+    %% 定义样式
+    classDef input fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1,rx:5,ry:5;
+    classDef backbone fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C,rx:5,ry:5;
+    classDef pooling fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C,rx:5,ry:5;
+    classDef fusion fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#880E4F,rx:5,ry:5;
+    classDef dense fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#F57F17,rx:5,ry:5;
+    classDef scaling fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,rx:5,ry:5;
+    classDef output fill:#E0F2F1,stroke:#00695C,stroke-width:3px,color:#004D40,rx:10,ry:10;
+
+    subgraph Inputs [输入层 Inputs]
+        direction LR
+        IMG_IN[图像输入<br>Image Input<br>(B, 3, 512, 512)]:::input
+        SEX_IN[性别输入<br>Sex Input<br>(B, 1)]:::input
+    end
+
+    subgraph ImagePath [图像特征提取路径 Image Branch]
+        IMG_IN --> BACKBONE[<b>ConvNeXt-Tiny Backbone</b><br>(预训练特征提取器)]:::backbone
+        BACKBONE -- "(B, 768, H', W')" --> GEM[<b>GeM Pooling</b><br>(广义平均池化)]:::pooling
+        GEM -- "(B, 768)" --> IMG_VEC(图像特征向量<br>Image Feature Vector):::dense
+    end
+
+    subgraph SexPath [性别编码路径 Sex Branch]
+        SEX_IN --> SEX_ENC_1[Linear (1->16)<br>BN + ReLU]:::dense
+        SEX_ENC_1 --> SEX_ENC_2[Linear (16->32)<br>BN + ReLU]:::dense
+        SEX_ENC_2 -- "(B, 32)" --> SEX_VEC(性别特征向量<br>Sex Feature Vector):::dense
+    end
+
+    subgraph FusionHead [融合与回归头 Fusion & Regression Head]
+        IMG_VEC --> CONCAT{特征拼接<br>Concatenation}:::fusion
+        SEX_VEC --> CONCAT
+        CONCAT -- "(B, 800)" --> HEAD_1[BN(800) + Dropout(0.5)]:::dense
+        HEAD_1 --> HEAD_2[Linear (800->512)<br><b>Mish Activation</b>]:::dense
+        HEAD_2 --> HEAD_3[BN(512) + Dropout(0.4)]:::dense
+        HEAD_3 --> HEAD_4[Linear (512->64)<br><b>Mish Activation</b>]:::dense
+        HEAD_4 --> HEAD_5[Linear (64->1)<br>Raw Output]:::dense
+    end
+
+    subgraph OutputLayer [输出层 Output Layer]
+        HEAD_5 --> SIGMOID[<b>Range Scaling</b><br>Sigmoid * MaxAge(240)]:::scaling
+        SIGMOID --> FINAL_OUT((最终预测骨龄<br>Final Bone Age<br>月份 Months)):::output
+    end
+
+    %% 样式调整
+    linkStyle default stroke:#455A64,stroke-width:2px,fill:none;
 # BoneXage-assessment
 Predicting children's bone age using hand X-ray images
 # 🦴 Bone Age Assessment using ConvNeXt & GeM Pooling
@@ -24,6 +69,7 @@ Ensure you have Python installed. You can install the dependencies via pip:
 
 ```bash
 pip install torch torchvision numpy pandas matplotlib scikit-learn tqdm pillow
+
 
 ##📂 Dataset Preparation
 This project uses the RSNA Pediatric Bone Age Challenge dataset. Please organize your data directory as follows:
