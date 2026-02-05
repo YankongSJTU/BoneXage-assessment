@@ -86,7 +86,7 @@ data/test_imgs/5678.png: 13 years 2 months (158.1 months)
 ##  Model Architecture
 The following diagram illustrates the data flow through the network, highlighting the dual-branch input and the specialized pooling and output layers.
 
-graph TD
+    graph TD
     subgraph Inputs
         IMG[Input Image<br>512x512] --> B[ConvNeXt-Tiny Backbone]
         SEX[Input Sex<br>0 or 1] --> G[Sex Encoder MLP]
